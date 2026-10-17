@@ -16,6 +16,7 @@
             overflow: hidden;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             user-select: none;
+            touch-action: none;
         }
         canvas {
             background: linear-gradient(to bottom, #2c3e50, #3498db);
@@ -55,7 +56,7 @@
             constructor() {
                 this.x = Math.random() * (canvas.width - 200) + 100;
                 this.y = canvas.height + 50;
-                let angle = Math.random() * 0.5 - 0.25; // زاوية الإطلاق نحو الأعلى
+                let angle = Math.random() * 0.5 - 0.25; 
                 let speed = Math.random() * 4 + 11 + (level * 0.5);
                 this.vx = angle * 10;
                 this.vy = -speed;
@@ -78,7 +79,6 @@
                 ctx.translate(this.x, this.y);
                 ctx.rotate(this.rotation);
 
-                // رسم الفاكهة الدائرية مع تفاصيل بسيطة
                 ctx.beginPath();
                 ctx.arc(0, 0, this.type.radius, 0, Math.PI * 2);
                 ctx.fillStyle = this.type.color;
@@ -87,7 +87,6 @@
                 ctx.strokeStyle = '#fff';
                 ctx.stroke();
 
-                // جوهر الفاكهة من الداخل
                 ctx.beginPath();
                 ctx.arc(0, 0, this.type.radius * 0.4, 0, Math.PI * 2);
                 ctx.fillStyle = this.type.inner;
@@ -123,24 +122,21 @@
             }
         }
 
-        // تفاعل الماوس / اللمس للتقطيع
-        let isMouseDown = false;
+        // نظام التعامل مع حركة القطع (سواء بالماوس أو اللمس)
+        let isSwiping = false;
 
-        canvas.addEventListener('mousedown', (e) => {
+        function startSwipe(x, y) {
             if (gameState === 'START' || gameState === 'GAMEOVER') {
                 resetGame();
                 gameState = 'PLAYING';
                 return;
             }
-            isMouseDown = true;
-            trail = [];
-        });
+            isSwiping = true;
+            trail = [{ x, y, time: Date.now() }];
+        }
 
-        canvas.addEventListener('mousemove', (e) => {
-            if (!isMouseDown || gameState !== 'PLAYING') return;
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+        function moveSwipe(x, y) {
+            if (!isSwiping || gameState !== 'PLAYING') return;
 
             trail.push({ x, y, time: Date.now() });
 
@@ -148,24 +144,48 @@
             fruits.forEach(fruit => {
                 if (!fruit.sliced) {
                     let dist = Math.hypot(fruit.x - x, fruit.y - y);
-                    if (dist < fruit.type.radius) {
+                    if (dist < fruit.type.radius + 10) { // توسيع مساحة القطع قليلاً لسهولة الاستجابة
                         fruit.sliced = true;
                         score += 10;
-                        // زيادة المستوى كل 100 نقطة
                         level = Math.floor(score / 100) + 1;
 
-                        // إضافة جزيئات تناثر
                         for (let i = 0; i < 15; i++) {
                             particles.push(new Particle(fruit.x, fruit.y, fruit.type.inner));
                         }
                     }
                 }
             });
-        });
+        }
 
-        window.addEventListener('mouseup', () => {
-            isMouseDown = false;
+        function endSwipe() {
+            isSwiping = false;
+        }
+
+        // ربط الأحداث (الماوس)
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            startSwipe(e.clientX - rect.left, e.clientY - rect.top);
         });
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            moveSwipe(e.clientX - rect.left, e.clientY - rect.top);
+        });
+        window.addEventListener('mouseup', endSwipe);
+
+        // ربط الأحداث (الهواتف وشاشات اللمس)
+        canvas.addEventListener('touchstart', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            startSwipe(touch.clientX - rect.left, touch.clientY - rect.top);
+            e.preventDefault();
+        });
+        canvas.addEventListener('touchmove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            moveSwipe(touch.clientX - rect.left, touch.clientY - rect.top);
+            e.preventDefault();
+        });
+        window.addEventListener('touchend', endSwipe);
 
         function resetGame() {
             score = 0;
@@ -176,18 +196,16 @@
             trail = [];
         }
 
-        // إطلاق الفواكه بشكل دوري
         let spawnTimer = 0;
         function handleSpawns() {
             spawnTimer++;
-            let spawnInterval = Math.max(30, 90 - (level * 10)); // يقل الوقت كلما زاد المستوى
+            let spawnInterval = Math.max(30, 90 - (level * 10));
             if (spawnTimer > spawnInterval) {
                 fruits.push(new Fruit());
                 spawnTimer = 0;
             }
         }
 
-        // حلقة اللعبة الأساسية
         function gameLoop() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -197,32 +215,27 @@
                 ctx.textAlign = 'center';
                 ctx.fillText('لعبة تقطيع الفواكه', canvas.width / 2, canvas.height / 2 - 40);
                 ctx.font = '20px sans-serif';
-                ctx.fillText('اضغط في أي مكان للبدء بالسحب والقطع', canvas.width / 2, canvas.height / 2 + 20);
+                ctx.fillText('انقر واسحب الماوس بسرعة لقطع الفواكه', canvas.width / 2, canvas.height / 2 + 20);
             } 
             else if (gameState === 'PLAYING') {
                 handleSpawns();
 
-                // تحديث ورسم الفواكه
                 for (let i = fruits.length - 1; i >= 0; i--) {
                     let f = fruits[i];
                     f.update();
                     f.draw();
 
-                    // إذا سقطت الفاكهة دون قطعها
                     if (f.y > canvas.height + 60 && !f.sliced) {
                         lives--;
                         fruits.splice(i, 1);
                         if (lives <= 0) {
                             gameState = 'GAMEOVER';
                         }
-                    } 
-                    // حذف الفواكه التي خرجت بعد تقطيعها
-                    else if (f.y > canvas.height + 60 && f.sliced) {
+                    } else if (f.y > canvas.height + 60 && f.sliced) {
                         fruits.splice(i, 1);
                     }
                 }
 
-                // تحديث ورسم الجزيئات (تناثر العصير)
                 for (let i = particles.length - 1; i >= 0; i--) {
                     let p = particles[i];
                     p.update();
@@ -230,22 +243,23 @@
                     if (p.alpha <= 0) particles.splice(i, 1);
                 }
 
-                // رسم خط السحب (Trail)
-                ctx.beginPath();
-                for (let i = 0; i < trail.length; i++) {
-                    let pt = trail[i];
-                    if (i === 0) ctx.moveTo(pt.x, pt.y);
-                    else ctx.lineTo(pt.x, pt.y);
+                // رسم خط السحب الأبيض
+                if (trail.length > 1) {
+                    ctx.beginPath();
+                    for (let i = 0; i < trail.length; i++) {
+                        let pt = trail[i];
+                        if (i === 0) ctx.moveTo(pt.x, pt.y);
+                        else ctx.lineTo(pt.x, pt.y);
+                    }
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+                    ctx.lineWidth = 6;
+                    ctx.lineCap = 'round';
+                    ctx.stroke();
                 }
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
-                ctx.lineWidth = 5;
-                ctx.lineCap = 'round';
-                ctx.stroke();
 
-                // تنظيف مسار السحب القديم
-                trail = trail.filter(pt => Date.now() - pt.time < 150);
+                // تنظيف المسار القديم بسرعة ليختفي الأثر
+                trail = trail.filter(pt => Date.now() - pt.time < 120);
 
-                // رسم الواجهة والنقاط والمراحل
                 ctx.fillStyle = '#ffffff';
                 ctx.font = 'bold 22px sans-serif';
                 ctx.textAlign = 'right';
@@ -268,7 +282,6 @@
             requestAnimationFrame(gameLoop);
         }
 
-        // بدء التشغيل
         gameLoop();
     </script>
 </body>
