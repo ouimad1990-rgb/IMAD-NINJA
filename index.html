@@ -149,9 +149,9 @@
         
         const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); // تحسين الأداء بتقليل الدقة الزائدة للشاشات العالية
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
         renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFShadowMap; // خفيف وأسرع من PCFSoftShadowMap
+        renderer.shadowMap.type = THREE.PCFShadowMap;
         container.appendChild(renderer.domElement);
 
         // --- 2. LIGHTING & EVENING SKY (OPTIMIZED) ---
@@ -161,7 +161,7 @@
         const dirLight = new THREE.DirectionalLight(0xfff5ea, 0.8);
         dirLight.position.set(40, 60, 20);
         dirLight.castShadow = true;
-        dirLight.shadow.mapSize.width = 1024; // تخفيض حجم الخريطة لتقليل الـ Lag
+        dirLight.shadow.mapSize.width = 1024;
         dirLight.shadow.mapSize.height = 1024;
         dirLight.shadow.camera.near = 0.5;
         dirLight.shadow.camera.far = 150;
@@ -172,7 +172,6 @@
         dirLight.shadow.camera.bottom = -d;
         scene.add(dirLight);
 
-        // تقليل عدد النجوم لتحسين الأداء
         const starsGeometry = new THREE.BufferGeometry();
         const starsCount = 120;
         const starPositions = new Float32Array(starsCount * 3);
@@ -189,7 +188,7 @@
         // --- 3. PURE WHITE ARENA & BOUNDARY ---
         const ARENA_RADIUS = 40;
         
-        const arenaGeo = new THREE.CylinderGeometry(ARENA_RADIUS, ARENA_RADIUS, 1, 32); // تقليل الحلقات لزيادة السرعة
+        const arenaGeo = new THREE.CylinderGeometry(ARENA_RADIUS, ARENA_RADIUS, 1, 32);
         const arenaMat = new THREE.MeshStandardMaterial({
             color: 0xffffff,
             roughness: 0.2,
@@ -207,7 +206,6 @@
         ring.position.y = 0.02;
         scene.add(ring);
 
-        // Boundary Pillar Markers
         for(let i=0; i<8; i++) {
             const angle = (i / 8) * Math.PI * 2;
             const px = Math.cos(angle) * ARENA_RADIUS;
@@ -226,7 +224,7 @@
         scene.add(playerGroup);
 
         const BALL_RADIUS = 0.6;
-        const ballGeo = new THREE.SphereGeometry(BALL_RADIUS, 16, 16); // دقة خفيفة وسريعة
+        const ballGeo = new THREE.SphereGeometry(BALL_RADIUS, 16, 16);
         const ballMat = new THREE.MeshStandardMaterial({ color: 0x4f46e5, roughness: 0.3, metalness: 0.8 });
         const playerBall = new THREE.Mesh(ballGeo, ballMat);
         playerBall.position.y = BALL_RADIUS;
@@ -380,6 +378,8 @@
 
                 if (this.health <= 0) {
                     this.destroy();
+                    // زيادة نقاط العيش (الصحة) عند قتل الـ NPC بمقدار 20 مثلاً (مع عدم تجاوز الحد الأقصى 100)
+                    addPlayerHealth(20);
                     return true;
                 }
                 return false;
@@ -388,6 +388,13 @@
             destroy() {
                 scene.remove(this.mesh);
             }
+        }
+
+        // دالة زيادة نقاط عيش اللاعب
+        function addPlayerHealth(amount) {
+            if (isGameOver) return;
+            playerHealth = Math.min(100, playerHealth + amount); // أقصى حد للصحة هو 100
+            document.getElementById('health-bar').style.width = `${playerHealth}%`;
         }
 
         function spawnEnemies(count) {
@@ -718,7 +725,6 @@
 
         document.getElementById('restart-btn').addEventListener('click', restartGame);
 
-        // Start Menu Button Handler
         document.getElementById('start-btn').addEventListener('click', () => {
             document.getElementById('start-menu').classList.add('hidden');
             document.getElementById('hud-container').classList.remove('hidden');
@@ -726,7 +732,6 @@
             spawnEnemies(3);
         });
 
-        // Render Loop
         function animate() {
             requestAnimationFrame(animate);
 
@@ -746,7 +751,6 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        // بدء حلقة الرسوم مباشرة لتشغيل الخلفية بسلاسة
         animate();
     </script>
 </body>
