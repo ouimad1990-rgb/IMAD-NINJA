@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -57,8 +56,29 @@
     <!-- Canvas Container -->
     <div id="canvas-container"></div>
 
+    <!-- Start Menu Overlay -->
+    <div id="start-menu" class="absolute inset-0 z-50 flex items-center justify-center bg-gray-950/80 backdrop-blur-md">
+        <div class="glass-panel p-8 rounded-3xl text-center max-w-md w-11/12 text-gray-900 shadow-2xl">
+            <div class="mb-4">
+                <i class="fa-solid fa-crosshairs text-indigo-600 text-5xl animate-bounce"></i>
+            </div>
+            <h1 class="text-3xl font-black mb-2 text-indigo-900">حلبة القتال الثلاثية</h1>
+            <p class="text-gray-700 mb-6 text-sm">اقضِ على الأعداء، تادَ بالحركة السريعة، ولا تدعهم ينالون منك!</p>
+            
+            <div class="bg-white/40 p-4 rounded-2xl mb-6 text-right text-xs text-gray-800 space-y-1">
+                <div class="font-bold mb-1 text-indigo-900"><i class="fa-solid fa-circle-info"></i> طريقة اللعب:</div>
+                <div>• الهاتف: استخدم العصا اليسرى للحركة، والجانب الأيمن للإداراة، وزر الإطلاق للتصويب.</div>
+                <div>• الكمبيوتر: W, A, S, D للحركة + تحريك الفأرة للتوجيه + مسافة (Space) لإطلاق النار.</div>
+            </div>
+
+            <button id="start-btn" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg transition active:scale-95 flex items-center justify-center gap-2 text-lg">
+                <i class="fa-solid fa-play"></i> ابدأ اللعبة
+            </button>
+        </div>
+    </div>
+
     <!-- UI Overlay / HUD -->
-    <div class="hud-overlay w-full h-full flex flex-col justify-between p-4 box-border">
+    <div id="hud-container" class="hud-overlay w-full h-full flex flex-col justify-between p-4 box-border hidden">
         <!-- Top Bar: Health, Score & Controls Info -->
         <div class="flex justify-between items-start w-full max-w-4xl mx-auto">
             <!-- Health & Score -->
@@ -94,7 +114,7 @@
             <h2 id="modal-title" class="text-3xl font-black mb-2">انتهت اللعبة</h2>
             <p id="modal-desc" class="text-gray-700 mb-6">لقد تم القضاء عليك من قبل الأعداء!</p>
             <button id="restart-btn" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg transition active:scale-95 flex items-center justify-center gap-2">
-                <i class="fa-solid fa-rotate-right"></i> إعلاء المحاولة
+                <i class="fa-solid fa-rotate-right"></i> إعادة المحاولة
             </button>
         </div>
 
@@ -105,7 +125,7 @@
                 <div id="joystick-knob" class="w-14 h-14 bg-indigo-600/80 rounded-full absolute shadow-md border-2 border-white pointer-events-none"></div>
             </div>
 
-            <!-- Action Buttons (Fire & Camera Ball Roll) -->
+            <!-- Action Buttons (Fire) -->
             <div class="flex gap-4 interactive">
                 <!-- Shoot Button -->
                 <button id="shoot-btn" class="w-20 h-20 bg-red-600/80 active:bg-red-700 text-white rounded-full flex flex-col items-center justify-center shadow-xl border-2 border-white active:scale-90 transition">
@@ -122,57 +142,54 @@
         const container = document.getElementById('canvas-container');
         
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xefedf5); // Bright white evening tint
+        scene.background = new THREE.Color(0xefedf5);
         scene.fog = new THREE.FogExp2(0xefedf5, 0.008);
 
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
         
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); // تحسين الأداء بتقليل الدقة الزائدة للشاشات العالية
         renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.shadowMap.type = THREE.PCFShadowMap; // خفيف وأسرع من PCFSoftShadowMap
         container.appendChild(renderer.domElement);
 
-        // --- 2. LIGHTING & EVENING SKY WITH STARS ---
-        // Ambient White Light
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.75);
+        // --- 2. LIGHTING & EVENING SKY (OPTIMIZED) ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
         scene.add(ambientLight);
 
-        // Directional Evening Light
-        const dirLight = new THREE.DirectionalLight(0xfff5ea, 0.9);
-        dirLight.position.set(50, 80, 30);
+        const dirLight = new THREE.DirectionalLight(0xfff5ea, 0.8);
+        dirLight.position.set(40, 60, 20);
         dirLight.castShadow = true;
-        dirLight.shadow.mapSize.width = 2048;
-        dirLight.shadow.mapSize.height = 2048;
+        dirLight.shadow.mapSize.width = 1024; // تخفيض حجم الخريطة لتقليل الـ Lag
+        dirLight.shadow.mapSize.height = 1024;
         dirLight.shadow.camera.near = 0.5;
-        dirLight.shadow.camera.far = 250;
-        const d = 60;
+        dirLight.shadow.camera.far = 150;
+        const d = 45;
         dirLight.shadow.camera.left = -d;
         dirLight.shadow.camera.right = d;
         dirLight.shadow.camera.top = d;
         dirLight.shadow.camera.bottom = -d;
         scene.add(dirLight);
 
-        // Evening Sky Stars (Visible even in bright sky)
+        // تقليل عدد النجوم لتحسين الأداء
         const starsGeometry = new THREE.BufferGeometry();
-        const starsCount = 400;
+        const starsCount = 120;
         const starPositions = new Float32Array(starsCount * 3);
         for (let i = 0; i < starsCount * 3; i += 3) {
-            starPositions[i] = (Math.random() - 0.5) * 300;
-            starPositions[i + 1] = Math.random() * 100 + 20; // Above horizon
-            starPositions[i + 2] = (Math.random() - 0.5) * 300;
+            starPositions[i] = (Math.random() - 0.5) * 200;
+            starPositions[i + 1] = Math.random() * 80 + 20;
+            starPositions[i + 2] = (Math.random() - 0.5) * 200;
         }
         starsGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
-        const starsMaterial = new THREE.PointsMaterial({ color: 0x444466, size: 0.8, transparent: true, opacity: 0.6 });
+        const starsMaterial = new THREE.PointsMaterial({ color: 0x444466, size: 1.0, transparent: true, opacity: 0.5 });
         const starField = new THREE.Points(starsGeometry, starsMaterial);
         scene.add(starField);
 
         // --- 3. PURE WHITE ARENA & BOUNDARY ---
-        const ARENA_RADIUS = 45;
+        const ARENA_RADIUS = 40;
         
-        // Circular Arena Floor
-        const arenaGeo = new THREE.CylinderGeometry(ARENA_RADIUS, ARENA_RADIUS, 1, 64);
+        const arenaGeo = new THREE.CylinderGeometry(ARENA_RADIUS, ARENA_RADIUS, 1, 32); // تقليل الحلقات لزيادة السرعة
         const arenaMat = new THREE.MeshStandardMaterial({
             color: 0xffffff,
             roughness: 0.2,
@@ -183,8 +200,7 @@
         arena.receiveShadow = true;
         scene.add(arena);
 
-        // Subtle Boundary Ring
-        const ringGeo = new THREE.RingGeometry(ARENA_RADIUS - 0.3, ARENA_RADIUS, 64);
+        const ringGeo = new THREE.RingGeometry(ARENA_RADIUS - 0.3, ARENA_RADIUS, 32);
         const ringMat = new THREE.MeshBasicMaterial({ color: 0x4f46e5, side: THREE.DoubleSide, transparent: true, opacity: 0.5 });
         const ring = new THREE.Mesh(ringGeo, ringMat);
         ring.rotation.x = Math.PI / 2;
@@ -192,79 +208,71 @@
         scene.add(ring);
 
         // Boundary Pillar Markers
-        for(let i=0; i<12; i++) {
-            const angle = (i / 12) * Math.PI * 2;
+        for(let i=0; i<8; i++) {
+            const angle = (i / 8) * Math.PI * 2;
             const px = Math.cos(angle) * ARENA_RADIUS;
             const pz = Math.sin(angle) * ARENA_RADIUS;
-            const pillarGeo = new THREE.CylinderGeometry(0.5, 0.5, 4, 16);
+            const pillarGeo = new THREE.CylinderGeometry(0.4, 0.4, 3, 8);
             const pillarMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.1 });
             const pillar = new THREE.Mesh(pillarGeo, pillarMat);
-            pillar.position.set(px, 2, pz);
+            pillar.position.set(px, 1.5, pz);
             pillar.castShadow = true;
             pillar.receiveShadow = true;
             scene.add(pillar);
         }
 
-        // --- 4. PLAYER CREATION (BALL + HUMANOID) ---
+        // --- 4. PLAYER CREATION ---
         const playerGroup = new THREE.Group();
         scene.add(playerGroup);
 
-        // Player Physical Ball Base
         const BALL_RADIUS = 0.6;
-        const ballGeo = new THREE.SphereGeometry(BALL_RADIUS, 32, 32);
+        const ballGeo = new THREE.SphereGeometry(BALL_RADIUS, 16, 16); // دقة خفيفة وسريعة
         const ballMat = new THREE.MeshStandardMaterial({ color: 0x4f46e5, roughness: 0.3, metalness: 0.8 });
         const playerBall = new THREE.Mesh(ballGeo, ballMat);
         playerBall.position.y = BALL_RADIUS;
         playerBall.castShadow = true;
         playerGroup.add(playerBall);
 
-        // Humanoid Upper Body Attached on Top of Ball
         function createHumanoidMesh(isEnemy = false) {
             const group = new THREE.Group();
-
             const bodyColor = isEnemy ? 0xd97706 : 0x3b82f6;
             const mat = new THREE.MeshStandardMaterial({ color: bodyColor, roughness: 0.4 });
 
-            // Torso
-            const torsoGeo = new THREE.CylinderGeometry(0.35, 0.25, 0.9, 16);
+            const torsoGeo = new THREE.CylinderGeometry(0.32, 0.22, 0.8, 10);
             const torso = new THREE.Mesh(torsoGeo, mat);
             torso.position.y = 1.1;
             torso.castShadow = true;
             group.add(torso);
 
-            // Head
-            const headGeo = new THREE.SphereGeometry(0.22, 16, 16);
+            const headGeo = new THREE.SphereGeometry(0.2, 10, 10);
             const headMat = new THREE.MeshStandardMaterial({ color: isEnemy ? 0xef4444 : 0x1d4ed8 });
             const head = new THREE.Mesh(headGeo, headMat);
-            head.position.y = 1.7;
+            head.position.y = 1.65;
             head.castShadow = true;
             group.add(head);
 
-            // Visor / Eyes
-            const visorGeo = new THREE.BoxGeometry(0.25, 0.08, 0.15);
+            const visorGeo = new THREE.BoxGeometry(0.22, 0.07, 0.12);
             const visorMat = new THREE.MeshBasicMaterial({ color: isEnemy ? 0xff0000 : 0x00ffff });
             const visor = new THREE.Mesh(visorGeo, visorMat);
-            visor.position.set(0, 1.72, 0.15);
+            visor.position.set(0, 1.67, 0.14);
             group.add(visor);
 
-            // Weapon / Gun
             const gunGroup = new THREE.Group();
             const gunBody = new THREE.Mesh(
-                new THREE.BoxGeometry(0.12, 0.15, 0.6),
+                new THREE.BoxGeometry(0.1, 0.12, 0.5),
                 new THREE.MeshStandardMaterial({ color: 0x111827, metalness: 0.8 })
             );
             gunGroup.add(gunBody);
 
-            // Barrel
             const barrel = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.04, 0.04, 0.3),
+                new THREE.CylinderGeometry(0.035, 0.035, 0.25),
                 new THREE.MeshStandardMaterial({ color: 0x374151 })
             );
             barrel.rotation.x = Math.PI / 2;
-            barrel.position.set(0, 0.02, 0.35);
+            barrel.position.set(0, 0.02, 0.3);
             gunGroup.add(barrel);
 
-            gunGroup.position.set(0.35, 1.25, 0.3);
+            gunGroup.position.set(0.32, 1.2, 0.25);
             group.add(gunGroup);
 
             return group;
@@ -273,22 +281,17 @@
         const playerHumanoid = createHumanoidMesh(false);
         playerGroup.add(playerHumanoid);
 
-        // Game State Variables
         let playerHealth = 100;
         let score = 0;
         let isGameOver = false;
+        let gameStarted = false;
 
-        // Player Controls & Physics State
         const playerPos = new THREE.Vector3(0, 0, 0);
-        const playerVelocity = new THREE.Vector3(0, 0, 0);
-        let cameraYaw = 0;   // Horizontal camera angle
-        let cameraPitch = 0.2; // Vertical camera angle
+        let cameraYaw = 0;
+        let cameraPitch = 0.2;
 
-        // Projectiles array
         const playerBullets = [];
         const enemyBullets = [];
-
-        // NPC List
         const npcs = [];
 
         // --- 5. NPC CREATION & AI LOGIC ---
@@ -296,16 +299,14 @@
             constructor(x, z) {
                 this.mesh = new THREE.Group();
                 
-                // NPC Base Ball
                 const bMesh = new THREE.Mesh(
-                    new THREE.SphereGeometry(BALL_RADIUS, 16, 16),
+                    new THREE.SphereGeometry(BALL_RADIUS, 12, 12),
                     new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.4 })
                 );
                 bMesh.position.y = BALL_RADIUS;
                 bMesh.castShadow = true;
                 this.mesh.add(bMesh);
 
-                // NPC Humanoid
                 this.humanoid = createHumanoidMesh(true);
                 this.mesh.add(this.humanoid);
 
@@ -313,31 +314,27 @@
                 scene.add(this.mesh);
 
                 this.health = 3;
-                this.speed = 0.07 + Math.random() * 0.03;
+                this.speed = 0.06 + Math.random() * 0.02;
                 this.lastShootTime = Date.now() + Math.random() * 2000;
-                this.shootInterval = 1800 + Math.random() * 1000; // Shoots every 1.8 - 2.8s
+                this.shootInterval = 2000 + Math.random() * 1000;
             }
 
             update() {
-                if (isGameOver) return;
+                if (isGameOver || !gameStarted) return;
 
-                // Vector towards player
                 const toPlayer = new THREE.Vector3().subVectors(playerGroup.position, this.mesh.position);
                 toPlayer.y = 0;
                 const distance = toPlayer.length();
 
-                // Rotate NPC to face player
                 if (distance > 0.1) {
                     const targetAngle = Math.atan2(toPlayer.x, toPlayer.z);
                     this.mesh.rotation.y = THREE.MathUtils.lerp(this.mesh.rotation.y, targetAngle, 0.1);
                 }
 
-                // AI Movement: Move towards player if further than 6 units
-                if (distance > 6.0) {
+                if (distance > 5.0) {
                     toPlayer.normalize();
                     this.mesh.position.addScaledVector(toPlayer, this.speed);
 
-                    // Clamp to Arena boundary
                     const distFromCenter = Math.hypot(this.mesh.position.x, this.mesh.position.z);
                     if (distFromCenter > ARENA_RADIUS - 1) {
                         const angle = Math.atan2(this.mesh.position.z, this.mesh.position.x);
@@ -346,37 +343,29 @@
                     }
                 }
 
-                // AI Shooting Logic: Actively shoot red lasers directly at player
                 const now = Date.now();
-                if (now - this.lastShootTime > this.shootInterval && distance < 35) {
+                if (now - this.lastShootTime > this.shootInterval && distance < 30) {
                     this.shootAtPlayer();
                     this.lastShootTime = now;
                 }
             }
 
             shootAtPlayer() {
-                // Shoot High-Visibility Red Laser
-                const bulletGeo = new THREE.SphereGeometry(0.25, 16, 16);
+                const bulletGeo = new THREE.SphereGeometry(0.2, 8, 8);
                 const bulletMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
                 const bullet = new THREE.Mesh(bulletGeo, bulletMat);
 
-                // Add bright red light to bullet for visibility
-                const pLight = new THREE.PointLight(0xff0000, 2, 8);
-                bullet.add(pLight);
-
-                // Position at NPC's weapon height
-                const spawnPos = this.mesh.position.clone().add(new THREE.Vector3(0, 1.25, 0));
+                const spawnPos = this.mesh.position.clone().add(new THREE.Vector3(0, 1.2, 0));
                 bullet.position.copy(spawnPos);
 
-                // Direct trajectory towards player position (aimed at player height)
                 const targetPos = playerGroup.position.clone().add(new THREE.Vector3(0, 1.0, 0));
                 const dir = new THREE.Vector3().subVectors(targetPos, spawnPos).normalize();
 
                 enemyBullets.push({
                     mesh: bullet,
                     direction: dir,
-                    speed: 0.45,
-                    life: 120
+                    speed: 0.4,
+                    life: 100
                 });
 
                 scene.add(bullet);
@@ -384,7 +373,6 @@
 
             takeDamage() {
                 this.health--;
-                // Flash white/red
                 this.humanoid.children[0].material.color.setHex(0xffffff);
                 setTimeout(() => {
                     if (this.humanoid) this.humanoid.children[0].material.color.setHex(0xd97706);
@@ -402,7 +390,6 @@
             }
         }
 
-        // Spawn Initial Enemy Waves
         function spawnEnemies(count) {
             for (let i = 0; i < count; i++) {
                 const angle = Math.random() * Math.PI * 2;
@@ -418,18 +405,16 @@
             document.getElementById('enemy-count').innerText = npcs.length;
         }
 
-        // --- 6. CONTROLS & TOUCH INPUT HANDLING ---
+        // --- 6. CONTROLS ---
         const keys = {};
         window.addEventListener('keydown', e => keys[e.code] = true);
         window.addEventListener('keyup', e => keys[e.code] = false);
 
-        // Touch Joystick Controls
         const joystickZone = document.getElementById('joystick-zone');
         const joystickKnob = document.getElementById('joystick-knob');
         let joystickActive = false;
         let joystickVector = { x: 0, y: 0 };
         let joystickTouchId = null;
-
         const maxRadius = 45;
 
         joystickZone.addEventListener('touchstart', e => {
@@ -461,9 +446,7 @@
 
         window.addEventListener('touchend', e => {
             for (let touch of e.changedTouches) {
-                if (touch.identifier === joystickTouchId) {
-                    resetJoystick();
-                }
+                if (touch.identifier === joystickTouchId) resetJoystick();
             }
         });
         window.addEventListener('touchcancel', resetJoystick);
@@ -486,16 +469,13 @@
             joystickVector = { x: dx / maxRadius, y: dy / maxRadius };
         }
 
-        // Touch Look / Aiming Control on Right Half of Screen
         let lookTouchId = null;
         let lastLookPos = { x: 0, y: 0 };
 
         window.addEventListener('touchstart', e => {
             for (let touch of e.changedTouches) {
-                // If touch is on right half of screen and not on buttons/joystick
                 if (touch.clientX > window.innerWidth / 2 && lookTouchId === null) {
-                    const target = touch.target;
-                    if (!target.closest('.interactive')) {
+                    if (!touch.target.closest('.interactive')) {
                         lookTouchId = touch.identifier;
                         lastLookPos = { x: touch.clientX, y: touch.clientY };
                     }
@@ -520,15 +500,12 @@
 
         const resetLookTouch = (e) => {
             for (let touch of e.changedTouches) {
-                if (touch.identifier === lookTouchId) {
-                    lookTouchId = null;
-                }
+                if (touch.identifier === lookTouchId) lookTouchId = null;
             }
         };
         window.addEventListener('touchend', resetLookTouch);
         window.addEventListener('touchcancel', resetLookTouch);
 
-        // Mouse Drag Aim for Desktop
         let isMouseDown = false;
         let lastMousePos = { x: 0, y: 0 };
         window.addEventListener('mousedown', e => {
@@ -549,29 +526,23 @@
         });
         window.addEventListener('mouseup', () => isMouseDown = false);
 
-        // Player Fire Action
         function playerShoot() {
-            if (isGameOver) return;
+            if (isGameOver || !gameStarted) return;
 
-            const bulletGeo = new THREE.SphereGeometry(0.2, 16, 16);
+            const bulletGeo = new THREE.SphereGeometry(0.18, 8, 8);
             const bulletMat = new THREE.MeshBasicMaterial({ color: 0x4f46e5 });
             const bullet = new THREE.Mesh(bulletGeo, bulletMat);
 
-            const light = new THREE.PointLight(0x4f46e5, 2, 6);
-            bullet.add(light);
-
-            // Spawn at gun barrel
-            const gunOffset = new THREE.Vector3(0.35, 1.25, 0.5).applyAxisAngle(new THREE.Vector3(0, 1, 0), playerGroup.rotation.y);
+            const gunOffset = new THREE.Vector3(0.32, 1.2, 0.4).applyAxisAngle(new THREE.Vector3(0, 1, 0), playerGroup.rotation.y);
             bullet.position.copy(playerGroup.position).add(gunOffset);
 
-            // Shoot direction based on player orientation
             const dir = new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), playerGroup.rotation.y);
 
             playerBullets.push({
                 mesh: bullet,
                 direction: dir,
-                speed: 0.7,
-                life: 100
+                speed: 0.65,
+                life: 90
             });
 
             scene.add(bullet);
@@ -584,18 +555,16 @@
 
         // --- 7. GAME LOOP & UPDATES ---
         function updatePlayerMovement() {
-            if (isGameOver) return;
+            if (isGameOver || !gameStarted) return;
 
             let moveX = 0;
             let moveZ = 0;
 
-            // Keyboard input
             if (keys['KeyW'] || keys['ArrowUp']) moveZ += 1;
             if (keys['KeyS'] || keys['ArrowDown']) moveZ -= 1;
             if (keys['KeyA'] || keys['ArrowLeft']) moveX += 1;
             if (keys['KeyD'] || keys['ArrowRight']) moveX -= 1;
 
-            // Combine with touch joystick
             if (joystickActive) {
                 moveX = -joystickVector.x;
                 moveZ = -joystickVector.y;
@@ -606,7 +575,6 @@
                 const normX = moveX / Math.max(1, inputLen);
                 const normZ = moveZ / Math.max(1, inputLen);
 
-                // Movement vector relative to camera direction
                 const forward = new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), cameraYaw);
                 const right = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), cameraYaw);
 
@@ -615,18 +583,15 @@
                     .addScaledVector(right, normX)
                     .normalize();
 
-                const speed = 0.16;
+                const speed = 0.15;
                 playerGroup.position.addScaledVector(moveDir, speed);
 
-                // Rotate player upper body to movement/aim direction smoothly
                 const targetAngle = Math.atan2(moveDir.x, moveDir.z);
                 playerGroup.rotation.y = THREE.MathUtils.lerp(playerGroup.rotation.y, targetAngle, 0.15);
 
-                // Roll ball visually
                 playerBall.rotation.x += speed / BALL_RADIUS;
             }
 
-            // Arena Boundary Collisions
             const distFromCenter = Math.hypot(playerGroup.position.x, playerGroup.position.z);
             if (distFromCenter > ARENA_RADIUS - 1) {
                 const angle = Math.atan2(playerGroup.position.z, playerGroup.position.x);
@@ -634,14 +599,12 @@
                 playerGroup.position.z = Math.sin(angle) * (ARENA_RADIUS - 1);
             }
 
-            // Orient Player based on camera yaw if stationary
             if (inputLen === 0 && (joystickActive || lookTouchId !== null || isMouseDown)) {
                 playerGroup.rotation.y = THREE.MathUtils.lerp(playerGroup.rotation.y, cameraYaw, 0.1);
             }
         }
 
         function updateCamera() {
-            // Third-Person Camera Follow Logic
             const cameraDistance = 8.0;
             const cameraHeight = 3.5;
 
@@ -660,13 +623,13 @@
         }
 
         function updateBullets() {
-            // Player Bullets
+            if (!gameStarted) return;
+
             for (let i = playerBullets.length - 1; i >= 0; i--) {
                 const b = playerBullets[i];
                 b.mesh.position.addScaledVector(b.direction, b.speed);
                 b.life--;
 
-                // Hit detection with NPCs
                 let hit = false;
                 for (let j = npcs.length - 1; j >= 0; j--) {
                     const npc = npcs[j];
@@ -679,7 +642,6 @@
                             document.getElementById('score-val').innerText = score;
                             updateEnemyCountUI();
 
-                            // Spawn new enemies if all cleared
                             if (npcs.length === 0) {
                                 setTimeout(() => spawnEnemies(4), 1000);
                             }
@@ -694,13 +656,11 @@
                 }
             }
 
-            // Enemy Red Laser Bullets
             for (let i = enemyBullets.length - 1; i >= 0; i--) {
                 const b = enemyBullets[i];
                 b.mesh.position.addScaledVector(b.direction, b.speed);
                 b.life--;
 
-                // Hit detection with Player
                 const playerTargetPos = playerGroup.position.clone().add(new THREE.Vector3(0, 1, 0));
                 const distToPlayer = b.mesh.position.distanceTo(playerTargetPos);
 
@@ -745,7 +705,6 @@
 
             playerGroup.position.set(0, 0, 0);
 
-            // Clear active bullets & enemies
             playerBullets.forEach(b => scene.remove(b.mesh));
             enemyBullets.forEach(b => scene.remove(b.mesh));
             playerBullets.length = 0;
@@ -759,33 +718,36 @@
 
         document.getElementById('restart-btn').addEventListener('click', restartGame);
 
-        // Start initial game state
-        spawnEnemies(3);
+        // Start Menu Button Handler
+        document.getElementById('start-btn').addEventListener('click', () => {
+            document.getElementById('start-menu').classList.add('hidden');
+            document.getElementById('hud-container').classList.remove('hidden');
+            gameStarted = true;
+            spawnEnemies(3);
+        });
 
         // Render Loop
         function animate() {
             requestAnimationFrame(animate);
 
-            updatePlayerMovement();
-            updateCamera();
-
-            npcs.forEach(npc => npc.update());
-            updateBullets();
+            if (gameStarted) {
+                updatePlayerMovement();
+                updateCamera();
+                npcs.forEach(npc => npc.update());
+                updateBullets();
+            }
 
             renderer.render(scene, camera);
         }
 
-        // --- 8. RESIZE & INITIALIZATION ---
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        window.onload = function() {
-            animate();
-        };
+        // بدء حلقة الرسوم مباشرة لتشغيل الخلفية بسلاسة
+        animate();
     </script>
 </body>
 </html>
-```
