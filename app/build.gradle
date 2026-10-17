@@ -1,0 +1,17 @@
+plugins {
+id 'com.android.application'
+}
+
+android {
+namespace 'com.imadcraft.game'
+compileSdk 35
+
+defaultConfig {
+    applicationId 'com.imadcraft.game'
+    minSdk 23
+    targetSdk 28
+    versionCode 1
+    versionName '1.0'
+}
+
+}
